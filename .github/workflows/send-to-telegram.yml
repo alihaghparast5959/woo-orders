@@ -1,0 +1,30 @@
+name: Send WooCommerce Orders to Telegram
+
+on:
+  push:
+    paths:
+      - 'orders/*.json'
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: دریافت مخزن
+        uses: actions/checkout@v4
+
+      - name: خواندن پیام از فایل سفارش
+        id: read_order
+        run: |
+          file=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^orders/' | tail -n1)
+          echo "فایل جدید: $file"
+          MESSAGE=$(jq -r .message "$file")
+          echo "MESSAGE=$MESSAGE" >> $GITHUB_OUTPUT
+
+      - name: ارسال پیام به تلگرام
+        env:
+          TELEGRAM_TOKEN: 8142546610:AAEqMND_rsZ3Py4cZvwttWvyDUi4uzKZQ6Y
+          CHAT_ID: 191827849
+        run: |
+          curl -s -X POST https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage \
+            -d chat_id=$CHAT_ID \
+            -d text="${{ steps.read_order.outputs.MESSAGE }}"
